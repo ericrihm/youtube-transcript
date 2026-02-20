@@ -45,3 +45,5 @@ If you see `No transcript tracks found` on a video that clearly has captions:
 - Open the extension service worker console (`edge://extensions` → this extension → **service worker**) and page DevTools console to inspect `[yt-transcript] caption track discovery` logs.
 
 The extension now reads player data from the page `MAIN` world, which fixes cases where caption tracks were hidden from isolated extension scripts.
+
+If transcript fetching fails, check the console logs for `[yt-transcript] transcript fetch` (status/content-type/length). The extension now retries with `fmt=json3` and can parse XML, JSON3, or VTT transcript payloads.

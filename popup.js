@@ -55,7 +55,6 @@ async function readVideoDataFromTab(tabId) {
       const tracklist = response?.captions?.playerCaptionsTracklistRenderer;
       const tracks = tracklist?.captionTracks || [];
 
-      // Helpful debug information in the page console.
       console.debug("[yt-transcript] caption track discovery", {
         hasInitialPlayerResponse: !!window.ytInitialPlayerResponse,
         hasYtcfgPlayerResponse: !!window.ytcfg?.data_?.PLAYER_RESPONSE || !!window.ytcfg?.get?.("PLAYER_RESPONSE"),
@@ -120,13 +119,28 @@ function pickTrack(tracks, selection) {
   return manualEnglish || autoEnglish || tracks[0];
 }
 
-function transcriptXmlToPlainText(xml) {
+function forceJson3Url(baseUrl) {
+  const u = new URL(baseUrl);
+  u.searchParams.set("fmt", "json3");
+  return u.toString();
+}
+
+function textFromJsonEvents(data) {
+  const events = Array.isArray(data?.events) ? data.events : [];
+  const lines = events
+    .flatMap((event) => event?.segs || [])
+    .map((seg) => (seg?.utf8 || "").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  return cleanTranscriptText(lines.join("\n"));
+}
+
+function textFromXml(xml) {
   const doc = new DOMParser().parseFromString(xml, "text/xml");
   const parseError = doc.querySelector("parsererror");
-  if (parseError) throw new Error("Transcript response was not valid XML.");
+  if (parseError) return "";
 
   const entries = [...doc.getElementsByTagName("text")];
-  if (!entries.length) throw new Error("Transcript response was empty.");
+  if (!entries.length) return "";
 
   const text = entries
     .map((node) => {
@@ -137,9 +151,82 @@ function transcriptXmlToPlainText(xml) {
     .filter(Boolean)
     .join("\n");
 
-  const cleaned = cleanTranscriptText(text);
-  if (!cleaned) throw new Error("Transcript contains no text lines.");
-  return cleaned;
+  return cleanTranscriptText(text);
+}
+
+function textFromVtt(vtt) {
+  const lines = vtt
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("WEBVTT") && !line.includes("-->") && !/^\d+$/.test(line));
+  return cleanTranscriptText(lines.join("\n"));
+}
+
+function transcriptPayloadToText(payload) {
+  const raw = (payload || "").trim();
+  if (!raw) return "";
+
+  if (raw.startsWith("{")) {
+    try {
+      return textFromJsonEvents(JSON.parse(raw));
+    } catch {
+      return "";
+    }
+  }
+
+  if (raw.startsWith("WEBVTT")) {
+    return textFromVtt(raw);
+  }
+
+  return textFromXml(raw);
+}
+
+async function fetchTranscriptPayloadFromTab(tabId, url) {
+  const [{ result }] = await chrome.scripting.executeScript({
+    target: { tabId },
+    world: "MAIN",
+    args: [url],
+    func: async (targetUrl) => {
+      const response = await fetch(targetUrl, { credentials: "include" });
+      const payload = await response.text();
+      return {
+        ok: response.ok,
+        status: response.status,
+        contentType: response.headers.get("content-type") || "",
+        payload,
+        url: targetUrl
+      };
+    }
+  });
+
+  if (!result) throw new Error("Failed to fetch transcript payload from YouTube page context.");
+  return result;
+}
+
+async function getTranscriptTextFromTrack(tabId, track) {
+  const attempts = [track.baseUrl, forceJson3Url(track.baseUrl)];
+
+  for (const url of attempts) {
+    const res = await fetchTranscriptPayloadFromTab(tabId, url);
+    console.debug("[yt-transcript] transcript fetch", {
+      status: res.status,
+      ok: res.ok,
+      contentType: res.contentType,
+      length: res.payload?.length || 0,
+      url
+    });
+
+    if (!res.ok) {
+      continue;
+    }
+
+    const text = transcriptPayloadToText(res.payload);
+    if (text) {
+      return text;
+    }
+  }
+
+  throw new Error("Transcript payload could not be parsed (not XML/JSON3/VTT). Try another video or disable blockers on YouTube.");
 }
 
 async function downloadTranscript(title, text) {
@@ -187,14 +274,7 @@ async function saveTranscript() {
 
   const selectedLanguage = languageSelect.value;
   const chosenTrack = pickTrack(cachedVideoData.tracks, selectedLanguage);
-
-  const response = await fetch(chosenTrack.baseUrl);
-  if (!response.ok) {
-    throw new Error(`Transcript request failed: ${response.status}`);
-  }
-
-  const xml = await response.text();
-  const transcriptText = transcriptXmlToPlainText(xml);
+  const transcriptText = await getTranscriptTextFromTrack(tab.id, chosenTrack);
 
   await downloadTranscript(cachedVideoData.title, transcriptText);
   setStatus(`Saved transcript for "${cachedVideoData.title}".`);

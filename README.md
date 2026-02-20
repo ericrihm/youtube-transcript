@@ -35,3 +35,13 @@ This repo includes a Microsoft Edge / Chromium extension that adapts the `yt_tra
 - `popup.html` / `popup.css` – Popup UI
 - `popup.js` – Transcript detection, extraction, and download logic
 - `yt_transcript.py` – Original local Python script (reference)
+
+## Troubleshooting
+
+If you see `No transcript tracks found` on a video that clearly has captions:
+
+- Reload the YouTube tab and reopen the extension popup.
+- Click **Detect** to force refresh track discovery.
+- Open the extension service worker console (`edge://extensions` → this extension → **service worker**) and page DevTools console to inspect `[yt-transcript] caption track discovery` logs.
+
+The extension now reads player data from the page `MAIN` world, which fixes cases where caption tracks were hidden from isolated extension scripts.

@@ -4,6 +4,7 @@ const languageSelect = document.getElementById("languageSelect");
 const statusEl = document.getElementById("status");
 
 let cachedVideoData = null;
+let cachedTabUrl = null;
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -44,11 +45,23 @@ async function getActiveYoutubeTab() {
 async function readVideoDataFromTab(tabId) {
   const [{ result }] = await chrome.scripting.executeScript({
     target: { tabId },
+    world: "MAIN",
     func: () => {
-      const response = window.ytInitialPlayerResponse;
+      const response =
+        window.ytInitialPlayerResponse ||
+        window.ytcfg?.data_?.PLAYER_RESPONSE ||
+        window.ytcfg?.get?.("PLAYER_RESPONSE");
       const details = response?.videoDetails || {};
       const tracklist = response?.captions?.playerCaptionsTracklistRenderer;
       const tracks = tracklist?.captionTracks || [];
+
+      // Helpful debug information in the page console.
+      console.debug("[yt-transcript] caption track discovery", {
+        hasInitialPlayerResponse: !!window.ytInitialPlayerResponse,
+        hasYtcfgPlayerResponse: !!window.ytcfg?.data_?.PLAYER_RESPONSE || !!window.ytcfg?.get?.("PLAYER_RESPONSE"),
+        trackCount: tracks.length,
+        href: location.href
+      });
 
       return {
         title: details.title || document.title.replace(/\s*-\s*YouTube\s*$/i, ""),
@@ -150,6 +163,7 @@ async function detectLanguages() {
   const videoData = await readVideoDataFromTab(tab.id);
 
   cachedVideoData = videoData;
+  cachedTabUrl = tab.url;
   populateLanguageOptions(videoData.tracks);
 
   if (videoData.tracks.length === 0) {
@@ -165,8 +179,9 @@ async function saveTranscript() {
   setStatus("Fetching transcript...");
 
   const tab = await getActiveYoutubeTab();
-  if (!cachedVideoData) {
+  if (!cachedVideoData || cachedTabUrl !== tab.url) {
     cachedVideoData = await readVideoDataFromTab(tab.id);
+    cachedTabUrl = tab.url;
     populateLanguageOptions(cachedVideoData.tracks);
   }
 

@@ -1,16 +1,18 @@
 # YouTube Transcript Saver (Edge Extension)
 
-This repo now includes a Microsoft Edge/Chromium extension that recreates the transcript workflow from `yt_transcript.py` in-browser.
+This repo includes a Microsoft Edge / Chromium extension that adapts the `yt_transcript.py` workflow to run locally in the browser.
 
 ## What it does
 
 - Uses the active YouTube tab.
-- Reads available caption tracks from the page.
-- Chooses transcript in this order:
-  1. Manual English (`en`, `en-US`, `en-GB`)
-  2. Auto-generated English
-  3. First available track
-- Downloads transcript as a `.txt` file named after the video title.
+- Detects available caption languages.
+- Language selection behavior:
+  - `(auto)` (default):
+    1. Manual English (`en`, `en-US`, `en-GB`)
+    2. Auto-generated English
+    3. First available track
+  - Or choose a specific detected language in the popup.
+- Downloads transcript as a plain `.txt` file named after the video title.
 
 ## Load in Edge
 
@@ -23,12 +25,13 @@ This repo now includes a Microsoft Edge/Chromium extension that recreates the tr
 
 1. Open a YouTube video page.
 2. Click the extension icon.
-3. Click **Save Transcript as .txt**.
-4. Choose where to save the file.
+3. (Optional) Click **Detect** to refresh transcript languages.
+4. Choose language or keep `(auto)`.
+5. Click **Save Transcript as .txt** and choose where to save.
 
 ## Files
 
 - `manifest.json` – Extension manifest (MV3)
 - `popup.html` / `popup.css` – Popup UI
-- `popup.js` – Transcript extraction + download logic
+- `popup.js` – Transcript detection, extraction, and download logic
 - `yt_transcript.py` – Original local Python script (reference)

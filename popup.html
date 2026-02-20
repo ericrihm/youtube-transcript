@@ -10,7 +10,16 @@
     <main>
       <h1>YouTube Transcript Saver</h1>
       <p id="status">Ready.</p>
-      <button id="saveBtn">Save Transcript as .txt</button>
+
+      <label for="languageSelect">Language</label>
+      <div class="row">
+        <select id="languageSelect" disabled>
+          <option value="auto">(auto)</option>
+        </select>
+        <button id="detectBtn" type="button">Detect</button>
+      </div>
+
+      <button id="saveBtn" type="button">Save Transcript as .txt</button>
       <p class="hint">Open a YouTube video tab first.</p>
     </main>
     <script src="popup.js"></script>

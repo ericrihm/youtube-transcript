@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Transcript Saver",
+  "version": "1.0.0",
+  "description": "Pull a YouTube transcript and save it as a text file named after the video title.",
+  "permissions": ["activeTab", "scripting", "downloads"],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://youtu.be/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

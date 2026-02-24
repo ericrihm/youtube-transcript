@@ -1,0 +1,59 @@
+:root {
+  color-scheme: light dark;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  width: 340px;
+  margin: 0;
+  padding: 12px;
+}
+
+h1 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+#status {
+  min-height: 38px;
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+select,
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+#saveBtn {
+  width: 100%;
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  opacity: 0.8;
+}
